@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title> Interactive U.S. Map with D3</title>
+  
+  <link rel="stylesheet" href="css/style.css">
+
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  <script type="module" src="./js/main.js"></script>
+
+  <style>
+    body { margin: 5; }
+    svg { width: 100%; height: 100vh; }
+    .state {
+      /* fill: #9ca4ec;
+      stroke: #4866ff; */
+      stroke-width: 1;
+      cursor: pointer;
+    }
+    .state:hover {
+      fill: #4866ff;
+    }
+  </style>
+</head>
+<body>
+
+  <h1> Visualizing Student Access to Technology, Income Levels,<br> and Graduation Rates in the 
+    United States  </h1>
+
+  <div id="tooltip" class="tooltip" style="position: absolute; display: none; background: white; border: 1px solid #ccc; padding: 6px; border-radius: 4px; font-size: 12px; pointer-events: none;"></div>
+
+
+  <div class="controls">
+    <label for="year-select">Select Year: </label>
+    <select id="year-select">
+      <option value="2020">2020</option>
+      <option value="2021" selected>2021</option>
+      <option value="2022">2022</option>
+    </select>
+  </div>
+  <a href="compare.html" class="link-button">Go to Comparison View</a>
+
+
+
+  <!-- <div class="compare-controls">
+    <label for="compare-mode">Compare Mode:</label>
+    <select id="compare-mode">
+      <option value="none">-- Select --</option>
+      <option value="maps">Compare Maps</option>
+      <option value="scatterplots">Compare Scatterplots</option>
+    </select>
+  </div> -->
+  
+
+  
+
+<div class="dashboard">
+    <div class="left-panel">
+      <svg id="map"></svg>
+      <svg id="pie"></svg>
+    </div>
+
+    <div class="right-panel">
+      <svg id="scatterplot"></svg>
+      <svg id="barchart"></svg>
+    </div>
+  </div>
+
+</body>
+</html>
+
+<!-- 
+  <script> "js/main.js" </script> -->
+  <!-- const width = 500;
+  const height = 610;
+
+  const svg = d3.select("svg")
+      .attr("viewBox", [0, 0, width, height]);
+
+  const projection = d3.geoAlbersUsa()
+      .translate([width / 2, height / 2])
+      .scale(1000);
+
+  const path = d3.geoPath().projection(projection);
+
+  // Bar chart setup
+  const barWidth = 400;
+  const barHeight = 300;
+  const barMargin = { top: 20, right: 20, bottom: 50, left: 50 };
+
+  const barSvg = d3.select("#barchart")
+    .attr("width", barWidth)
+    .attr("height", barHeight);
+
+  barSvg.append("text")
+    .attr("id", "bar-title")
+    .attr("x", barWidth / 2)
+    .attr("y", barMargin.top / 2)
+    .attr("text-anchor", "middle")
+    .attr("font-size", "16px")
+    .text("Click a state to view percentages");
+
+
+
+  Promise.all([
+    d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"),
+    d3.csv("state_tech_income_2021.csv")
+  ]).then(([us, data]) => {
+    
+    const states = topojson.feature(us, us.objects.states).features;
+
+    const dataByState = new Map(data.map(d => [d.State, +d["Median Household Income"]]));
+
+    const color = d3.scaleQuantize()
+      .domain(d3.extent(data, d => +d["Median Household Income"]))
+      .range(d3.schemeBlues[9]);
+
+    svg.selectAll("path")
+      .data(states)
+      .join("path")
+      .attr("class", "state")
+      .attr("d", path)
+      .attr("fill", d => {
+        const income = dataByState.get(d.properties.name);
+        return income != null ? color(income) : "#ccc";
+      })
+      .attr("stroke", "#fff")
+      .attr("data-state", d => d.properties.name)
+      .on("click", (event, d) => {
+        const stateName = d.properties.name;
+
+        // 👉 ADD THIS:
+        const stateData = data.find(row => row.State === stateName);
+
+        if (!stateData) {
+          alert(`No data found for ${stateName}`);
+          return;
+        }
+
+        if (stateData["Graduation Percent"] === "") {
+          alert(`Graduation data is missing for ${stateName}`);
+        } else {
+          highlightScatter(stateName);
+          updateBarChart(stateData);
+        }
+      })
+      .append("title")
+      .text(d => d.properties.name);
+
+
+    // svg.selectAll("path")
+    //   .data(states)
+    //   .join("path")
+    //   .attr("class", "state")
+    //   .attr("d", path)
+    //   .attr("fill", d => {
+    //     const income = dataByState.get(d.properties.name);
+    //     return income != null ? color(income) : "#ccc";
+    //   })
+    //   .attr("stroke", "#fff")
+    //   .attr("data-state", d => d.properties.name)
+    //   .on("click", (event, d) => {
+    //     const stateName = d.properties.name;
+    //     highlightScatter(stateName);
+    //   })
+    //   .append("title")
+    //   .text(d => d.properties.name);
+
+          // Create a legend
+    const legendWidth = 300;
+    const legendHeight = 10;
+
+    const legendSvg = svg.append("g")
+    //   .attr("transform", `translate(${width - legendWidth - 20}, ${height - 40})`);
+      .attr("transform", `translate(${(width - legendWidth) / 2}, ${height - 40})`);
+
+    const legendScale = d3.scaleLinear()
+      .domain(color.domain())
+      .range([0, legendWidth]);
+
+    const legendAxis = d3.axisBottom(legendScale)
+      .ticks(5)
+      .tickFormat(d3.format("$,.0f"));
+
+    const legend = legendSvg.selectAll("rect")
+      .data(color.range().map(d => {
+        const r = color.invertExtent(d);
+        if (!r[0]) r[0] = legendScale.domain()[0];
+        if (!r[1]) r[1] = legendScale.domain()[1];
+        return r;
+      }))
+      .join("rect")
+      .attr("x", d => legendScale(d[0]))
+      .attr("y", 0)
+      .attr("width", d => legendScale(d[1]) - legendScale(d[0]))
+      .attr("height", legendHeight)
+      .attr("fill", d => color(d[0]));
+
+    legendSvg.append("g")
+      .attr("transform", `translate(0, ${legendHeight})`)
+      .call(legendAxis);
+
+    const scatterWidth = 500;
+    const scatterHeight = 400;
+    const margin = {top: 20, right: 30, bottom: 40, left: 50};
+
+    const scatterSvg = d3.select("#scatterplot")
+     .attr("width", scatterWidth)
+    .attr("height", scatterHeight);
+
+    const x = d3.scaleLinear()
+      .domain(d3.extent(data, d => +d["Median Household Income"]))
+      .range([margin.left, scatterWidth - margin.right]);
+
+      // const y = d3.scaleLinear()
+      //   .domain([d3.min(data, d => +d["GraduationRate"]) - 5, d3.max(data, d => +d["GraduationRate"]) + 5])
+      //   .range([scatterHeight - margin.bottom, margin.top]);
+
+    const y = d3.scaleLinear()
+      .domain([70, 100])
+      .range([scatterHeight - margin.bottom, margin.top]);
+
+
+      // X-axis
+    scatterSvg.append("g")
+      .attr("transform", `translate(0, ${scatterHeight - margin.bottom})`)
+      .call(d3.axisBottom(x).tickFormat(d3.format("$,")).ticks(5));
+
+      // Y-axis
+    scatterSvg.append("g")
+      .attr("transform", `translate(${margin.left}, 0)`)
+      .call(d3.axisLeft(y).ticks(5));
+
+    console.log("Column names:", Object.keys(data[0]));
+    console.log("again", Object.keys(data[1]));
+
+
+    const validData = data.filter(d => d["Graduation Percent"] !== "");
+
+    console.log(data.map(d => ({
+      state: d.State,
+      income: +d["Median Household Income"],
+      totalHouseholds: +d["Total Households"],
+      householdsWithInternet: +d["Households with Internet"],
+      withDesktopOrLaptop: +d["With Desktop or Laptop"],
+      onlySmartphone: +d["Only Smartphone"],
+      noComputer: +d["No Computer"],
+      year: +d["Year"],
+      percentWithInternet: +d["Percent With Internet"],
+      percentWithAnyComputer: +d["Percent With Any Computer"],
+      percentWithDesktopLaptop: +d["Percent With Desktop/Laptop"],
+      percentOnlySmartphone: +d["Percent Only Smartphone"],
+      gradRate: +d["Graduation Percent"]
+})));
+
+
+
+    scatterSvg.selectAll("circle")
+      .data(validData)
+      .join("circle")
+      .attr("cx", d => x(+d["Median Household Income"]))
+      .attr("cy", d => y(+d["Graduation Percent"]))
+      .attr("r", 5)
+      .attr("fill", "purple")
+      .append("title")
+      .text(d => `${d.State}: ${d["Graduation Percent"]}%`)
+      .on("click", (event, d) => {
+        highlightMap(d.State);
+      });
+
+
+    function highlightMap(stateName) {
+      svg.selectAll("path")
+        .attr("stroke", d => d.properties.name === stateName ? "black" : "#fff")
+        .attr("stroke-width", d => d.properties.name === stateName ? 2 : 1);
+    }
+
+
+    function highlightScatter(stateName) {
+      scatterSvg.selectAll("circle")
+      .attr("fill", d => d.State === stateName ? "orange" : "steelblue")
+      .attr("r", d => d.State === stateName ? 8 : 5);
+    }
+
+
+    function updateBarChart(stateData) {
+      const barData = [
+        { label: "Percent With Internet", value: +stateData["Percent With Internet"] },
+        { label: "Percent With Any Computer", value: +stateData["Percent With Any Computer"] },
+        { label: "Percent With Desktop or Laptop", value: +stateData["Percent With Desktop or Laptop"] },
+        { label: "Percent Only Smartphone", value: +stateData["Percent Only Smartphone"] }
+      ];
+
+            // SCALES
+      const xBar = d3.scaleBand()
+        .domain(barData.map(d => d.label))
+        .range([barMargin.left, barWidth - barMargin.right])
+        .padding(0.1);
+
+      const yBar = d3.scaleLinear()
+        .domain([0, 100])
+        .range([barHeight - barMargin.bottom, barMargin.top]);
+
+      // ✅ UPDATE BARS (using join pattern)
+      const bars = barSvg.selectAll("rect")
+        .data(barData);
+
+      bars.join("rect")
+        .attr("x", d => xBar(d.label))
+        .attr("y", d => yBar(d.value))
+        .attr("width", xBar.bandwidth())
+        .attr("height", d => yBar(0) - yBar(d.value))
+        .attr("fill", "teal");
+
+      // ✅ UPDATE X AXIS
+      const xAxis = barSvg.selectAll(".x-axis").data([null]);
+      xAxis.join("g")
+        .attr("class", "x-axis")
+        .attr("transform", `translate(0, ${barHeight - barMargin.bottom})`)
+        .call(d3.axisBottom(xBar))
+        .selectAll("text")
+        .attr("transform", "rotate(-30)")
+        .style("text-anchor", "end");
+
+      // ✅ UPDATE Y AXIS
+      const yAxis = barSvg.selectAll(".y-axis").data([null]);
+      yAxis.join("g")
+        .attr("class", "y-axis")
+        .attr("transform", `translate(${barMargin.left}, 0)`)
+        .call(d3.axisLeft(yBar));
+
+      barSvg.select("#bar-title")
+        .text(`Tech Access for ${stateData.State}`);
+
+    }
+
+    //   const xBar = d3.scaleBand()
+    //     .domain(barData.map(d => d.label))
+    //     .range([barMargin.left, barWidth - barMargin.right])
+    //     .padding(0.1);
+
+    //   const yBar = d3.scaleLinear()
+    //     .domain([0, 100])
+    //     .range([barHeight - barMargin.bottom, barMargin.top]);
+
+    //   // Clear old bars and axes
+    //   barSvg.selectAll("rect").remove();
+    //   barSvg.selectAll(".x-axis").remove();
+    //   barSvg.selectAll(".y-axis").remove();
+
+    //   barSvg.selectAll("rect")
+    //     .data(barData)
+    //     .join("rect")
+    //     .attr("x", d => xBar(d.label))
+    //     .attr("y", d => yBar(d.value))
+    //     .attr("width", xBar.bandwidth())
+    //     .attr("height", d => yBar(0) - yBar(d.value))
+    //     .attr("fill", "teal");
+
+    //   barSvg.append("g")
+    //     .attr("class", "x-axis")
+    //     .attr("transform", `translate(0, ${barHeight - barMargin.bottom})`)
+    //     .call(d3.axisBottom(xBar))
+    //     .selectAll("text")
+    //     .attr("transform", "rotate(-30)")
+    //     .style("text-anchor", "end");
+
+    //   barSvg.append("g")
+    //     .attr("class", "y-axis")
+    //     .attr("transform", `translate(${barMargin.left}, 0)`)
+    //     .call(d3.axisLeft(yBar));
+    // }
+
+
+
+  });
+  
+
+  </script> -->
+
+
+

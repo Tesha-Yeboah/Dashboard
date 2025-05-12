@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Compare U.S. Education & Income</title>
+
+  <link rel="stylesheet" href="css/style.css">
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  <script type="module" src="./js/compare.js"></script>
+</head>
+<body>
+
+  <h1>Compare Views</h1>
+  <div id="tooltip" class="tooltip" style="position: absolute; display: none; background: white; border: 1px solid #ccc; padding: 6px; border-radius: 4px; font-size: 12px; pointer-events: none;"></div>
+
+  <div class="compare-controls">
+    <label for="compare-mode">Select Comparison:</label>
+    <select id="compare-mode">
+      <option value="none">-- Select --</option>
+      <option value="maps">Compare Maps</option>
+      <option value="scatterplots">Compare Scatterplots</option>
+    </select>
+  </div>
+
+  <!-- Map Comparison -->
+  <div id="map-compare-container" class="compare-view" style="display: none;">
+    <div class="map-wrapper"><svg id="map-left" width="450" height="500"></svg></div>
+    <div class = "map-wrapper"><svg id="map-middle" width="450" height="500"></svg></div>
+    <div class="map-wrapper"><svg id="map-right" width="450" height="500"></svg></div>
+  </div>
+
+  <!-- Scatterplot Comparison -->
+  <div id="scatter-compare-container" class="compare-view" style="display: none;">
+    <svg id="scatter-left" width="450" height="500"></svg>
+    <svg id="scatter-middle" width="450" height="500"></svg>
+    <svg id="scatter-right" width="450" height="500"></svg>
+  </div>
+  
+
+  <p style="text-align: center;"><a href="index.html" class = "link-button"> ← Back to Main Dashboard</a></p>
+
+</body>
+</html>
